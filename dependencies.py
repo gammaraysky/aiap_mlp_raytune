@@ -89,6 +89,9 @@ class Dataset():
 
         self.oversample = Pipeline(steps=[('ros', RandomOverSampler(random_state=self.random_state)) ])
 
+        self.X_ord, self.X_ohe = None, None
+        self.X_train, self.X_test, self.y_train, self.y_test = None, None, None, None
+        self.X_train_os, self.X_test_os, self.y_train_os, self.y_test_os = None, None, None, None
 
 
     def get_ordinal_imbalanced(self):
@@ -245,8 +248,8 @@ def trial_results(results) -> Dict:
 
     return best_config
 
-def refit_model(clf, ordinal=False):
-    dataset = Dataset(TEST_SIZE, RANDOM_STATE)
+def refit_model(clf, ordinal=False, test_size=0.2, random_state=0):
+    dataset = Dataset(test_size, random_state)
     if (ordinal):
         X_train, X_test, y_train, y_test, X_train_os, X_test_os, y_train_os, y_test_os = dataset.get_transformed_ordinal_oversample()
     else:
@@ -258,9 +261,9 @@ def refit_model(clf, ordinal=False):
     y_testpred_os  = clf.predict(X_test_os)
     y_testpred_imb = clf.predict(X_test)
 
-    train_os_auc = roc_auc_score(y_train_os, y_score=y_trainpred_os, average="macro")
-    test_os_auc  = roc_auc_score(y_test_os,  y_score=y_testpred_os,  average="macro")
-    test_imb_auc = roc_auc_score(y_test,     y_score=y_testpred_imb, average="macro")
+    train_os_auc = roc_auc_score(y_train_os, y_score=clf.predict_proba(X_train_os)[:,1], )
+    test_os_auc  = roc_auc_score(y_test_os,  y_score=clf.predict_proba(X_test_os)[:,1],  )
+    test_imb_auc = roc_auc_score(y_test,     y_score=clf.predict_proba(X_test)[:,1],     )
 
     print("train_os_auc  test_os_auc  test_imb_auc ")
     print(f"{train_os_auc:>12.4f}  {test_os_auc:>11.4f}  {test_imb_auc:>12.4f}")
