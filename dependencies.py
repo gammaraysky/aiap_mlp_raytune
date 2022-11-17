@@ -25,7 +25,7 @@ from sklearn.neural_network import MLPClassifier
 from xgboost import XGBClassifier
 
 from imblearn.pipeline import Pipeline
-from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import RandomOverSampler, SMOTENC
 
 from pprint import pprint
 
@@ -87,7 +87,8 @@ class Dataset():
         self.tfm = Col_transformers(self.nominal, self.ordinal, self.numeric)
 
 
-        self.oversample = Pipeline(steps=[('ros', RandomOverSampler(random_state=self.random_state)) ])
+        # self.oversample = Pipeline(steps=[('ros', RandomOverSampler(random_state=self.random_state)) ])
+        self.oversample = Pipeline(steps=[('ros', SMOTENC(random_state=self.random_state, k_neighbors=5, categorical_features=self.tfm.cat_feature_mask)) ])
 
         self.X_ord, self.X_ohe = None, None
         self.X_train, self.X_test, self.y_train, self.y_test = None, None, None, None
@@ -225,7 +226,16 @@ class Dataset():
         return row
 
 
+def trial_res(results, metric):
 
+    df = results.get_dataframe()
+    cols = [c for c in df.columns if 'auc' in c or 'f2' in c] # or 'config' in c
+    best_result = results.get_best_result(metric=metric, mode='max')  # Get best result object
+    best_config = best_result.config
+
+    display(df[cols].sort_values(metric, ascending=False)[:10])
+
+    return best_config
 
 
 def trial_results(results) -> Dict:
@@ -296,7 +306,7 @@ def tune_for_recall(clf, X,y, threshline):
         pres.append(pre)
         recs.append(rec)
 
-    fig, ax = plt.subplots(figsize=(10,5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(6,3), constrained_layout=True)
 
     ax.plot(thresholds, accs, lw=2.5, alpha=0.8, label='acc')
     ax.plot(thresholds, f1s,  lw=2.5, alpha=0.8, label='f1')
